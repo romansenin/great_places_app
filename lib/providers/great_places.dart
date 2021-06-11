@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:great_places_app/helpers/location_helper.dart';
 import 'package:great_places_app/models/place.dart';
 import '../helpers/db_helper.dart';
 
@@ -11,23 +12,37 @@ class GreatPlaces with ChangeNotifier {
     return [..._items];
   }
 
-  void addPlace(
+  Future<void> addPlace(
     String pickedTitle,
     File pickedImage,
-  ) {
-    final newPlace = Place(
-      id: DateTime.now().toString(),
-      image: pickedImage,
-      title: pickedTitle,
-      location: null,
-    );
-    _items.add(newPlace);
-    notifyListeners();
-    DBHelper.insert('user_places', {
-      'id': newPlace.id,
-      'title': newPlace.title,
-      'image': newPlace.image.path
-    });
+    PlaceLocation pickedLocation,
+  ) async {
+    try {
+      final address = await LocationHelper.getPlaceAddress(
+          pickedLocation.latitude, pickedLocation.longitude);
+      final updatedLocation = PlaceLocation(
+          latitude: pickedLocation.latitude,
+          longitude: pickedLocation.longitude,
+          address: address);
+      final newPlace = Place(
+        id: DateTime.now().toString(),
+        image: pickedImage,
+        title: pickedTitle,
+        location: updatedLocation,
+      );
+      _items.add(newPlace);
+      notifyListeners();
+      DBHelper.insert('user_places', {
+        'id': newPlace.id,
+        'title': newPlace.title,
+        'image': newPlace.image.path,
+        'loc_lat': newPlace.location.latitude,
+        'loc_lng': newPlace.location.longitude,
+        'address': newPlace.location.address,
+      });
+    } catch (err) {
+      print(err);
+    }
   }
 
   Future<void> fetchAndSetPlaces() async {
@@ -37,8 +52,14 @@ class GreatPlaces with ChangeNotifier {
           (item) => Place(
             id: item['id'],
             title: item['title'],
-            image: File(item['image']),
-            location: null,
+            image: File(
+              item['image'],
+            ),
+            location: PlaceLocation(
+              latitude: item['loc_lat'],
+              longitude: item['loc_lng'],
+              address: item['address'],
+            ),
           ),
         )
         .toList();

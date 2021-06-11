@@ -9,7 +9,10 @@ class DBHelper {
       return db.execute('''CREATE TABLE user_places(
             id TEXT PRIMARY KEY,
             title TEXT,
-            image TEXT
+            image TEXT,
+            loc_lat REAL,
+            loc_lng REAL,
+            address TEXT
           )
         ''');
     }, version: 1);
